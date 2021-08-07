@@ -1,0 +1,1 @@
+Lambda Function for AWS SES Service. Used to send notification and thank you emails.

@@ -1,3 +1,4 @@
-Archive.zip
+.DSStore
+*.zip
 node_modules
 package-lock.json

@@ -28,6 +28,7 @@ exports.handler = async (event, context) => {
         };
     }
     let body = JSON.parse(event.body);
+    //  TO DO: Validations
     try {
         // Captcha Verification
         let response = await axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${body.recaptcha}`);
@@ -45,51 +46,42 @@ exports.handler = async (event, context) => {
             }
         };
     }
+    let promises = [];
     //Send thank you email to sender
-    SimpleEmailService.sendTemplatedEmail({
+    promises.push(SimpleEmailService.sendTemplatedEmail({
         Destination: {
             ToAddresses: [
                 body.email
-            ],
-            BccAddresses: [
-                process.env.PERSONAL_EMAIL
             ]
         },
-        Source: process.env.PERSONAL_EMAIL,
+        Source: process.env.PORTFOLIO_EMAIL,
         Template: 'PortfolioThankYou',
         TemplateData: JSON.stringify(body),
         ReplyToAddresses: [
-            process.env.PERSONAL_EMAIL
+            process.env.PORTFOLIO_EMAIL
         ]
-    }).on('success', function (response) {
-        console.log("Success: " + response);
-    }).on('error', function (error, response) {
-        console.log("Error: " + error);
-    }).send();
-    // try {
-    //     // Send notification email
-    //     let emailResponse = await SimpleEmailService.sendTemplatedEmail({
-    //         Destination: {
-    //             ToAddresses: [
-    //                 process.env.PERSONAL_EMAIL
-    //             ]
-    //         },
-    //         Source: process.env.PORTFOLIO_EMAIL,
-    //         Template: 'PortfolioNotification',
-    //         TemplateData: JSON.stringify(body),
-    //         ReplyToAddresses: [
-    //             body.email
-    //         ],
-    //     }).promise();
-    //     return {
-    //         statusCode: 200,
-    //         body: emailResponse
-    //     };
-    // } catch (e) {
-    //     console.error(e)
-    //     return {
-    //         statusCode: 400,
-    //         body: e
-    //     };
-    // }
+    }).promise());
+    //Send notification email
+    promises.push(SimpleEmailService.sendTemplatedEmail({
+        Destination: {
+            ToAddresses: [
+                process.env.PERSONAL_EMAIL
+            ]
+        },
+        Source: process.env.PORTFOLIO_EMAIL,
+        Template: 'PortfolioNotification',
+        TemplateData: JSON.stringify(body),
+        ReplyToAddresses: [
+            body.email
+        ],
+    }).promise());
+    let values = await Promise.allSettled(promises);
+    return values[1].status === 'rejected' ?
+        console.error(values[1].reason) || {
+            statusCode: 400,
+            body: JSON.stringify(values[1].reason)
+        } : {
+            statusCode: 200,
+            body: JSON.stringify(values[1].value)
+        };
 };
